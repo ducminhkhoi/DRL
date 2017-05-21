@@ -1,9 +1,10 @@
 from globals import *
+from Agents import Agent
 
 
-class A3C(Agent):
+class ES(Agent):
     def __init__(self):
-        super(A3C, self).__init__()
+        super(ES, self).__init__()
 
     def select_action(self, epoch, state):
         pass

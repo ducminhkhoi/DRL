@@ -1,8 +1,9 @@
 from globals import *
+from Agents import Agent
 
 
 class DQN(Agent):
-    def __init__(self, net, num_actions):
+    def __init__(self, net, num_actions, config):
         super(DQN, self).__init__()
 
         if isGPU:
@@ -10,26 +11,25 @@ class DQN(Agent):
         else:
             self.net = net
 
-        self.optimizer = torch.optim.Adam(self.net.parameters(), lr=1e-4)
+        self.optimizer = torch.optim.Adam(self.net.parameters(), lr=config['lr'])
         self.loss = torch.nn.MSELoss()
         self.experience_replay = deque()
-        self.initial_epsilon = 0.1
-        self.final_epsilon = 0.0001
         self.action_num = num_actions
-        self.batch_size = 32
-        self.memory_size = 50000
-        self.gamma = 0.99
+        self.batch_size = config['batch_size']
+        self.memory_size = config['memory_size']
+        self.gamma = config['gamma']
+        self.initial_epsilon = config['initial_epsilon']
+        self.final_epsilon = config['final_epsilon']
         self.epsilon = self.initial_epsilon
-        self.observation = 320
-        self.explore = 3000000
-        self.buffer = []
+        self.epsilon_decay = config['epsilon_decay']
+        self.observation = config['observation']
 
-    def select_action(self, epoch, state):
+    def select_action(self, state, test=False):
 
         on_state = self.preprocess(state, volatile=True)
 
         greedy = np.random.rand()
-        if greedy < self.epsilon or state.size()[0] < 4 or (epoch == 0 and state.size()[0] < 4):  # explore
+        if greedy < self.epsilon and not test:  # explore
             action = np.random.randint(self.action_num)
         else:  # exploit
             if isGPU:
@@ -37,20 +37,18 @@ class DQN(Agent):
             else:
                 action = np.argmax(self.net.forward(on_state).data.numpy())
 
-        if self.epsilon > self.final_epsilon and epoch > self.observation:
-            self.epsilon -= (self.initial_epsilon - self.final_epsilon) / self.explore
-
         return action
 
     def update(self, state, action, reward, new_state, done):
 
         self.experience_replay.append((state, action, reward, new_state, done))  # add new transition to dataset
-        # print("Length of experience replay", len(self.experience_replay))
 
         if len(self.experience_replay) > self.memory_size:  # if number of examples more than capacity of database, pop
+            self.epsilon = max(self.epsilon - (self.initial_epsilon - self.final_epsilon) / self.epsilon_decay, 0)
             self.experience_replay.popleft()
 
-        if len(self.experience_replay) > self.observation:  # if have enough experience example, go
+        if len(self.experience_replay) >= self.observation:  # if have enough experience example, go
+
             minibatch = np.array(random.sample(self.experience_replay, self.batch_size))
             states, actions, rewards, new_states, dones = tuple(minibatch[:, k] for k in range(5))
 

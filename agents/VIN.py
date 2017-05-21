@@ -1,4 +1,5 @@
 from globals import *
+from Agents import Agent
 
 
 class VIN(Agent):
