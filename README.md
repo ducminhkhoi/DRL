@@ -11,7 +11,6 @@ Steps:
   - `select_action`: the environment will provide the observation, the agent should decide which action to do
   - `update`: update the perception of the agent by the observation, reward and done
   Note: I made an example in `DQN.py`, so you can follow that to make new Agent
-+ `environments` folder contains different environments (to extract state from current observation). I have implemented the *FlappyBird* environment
 + To use the `visdom` for displaying the result:
   - You first need to start the server by running the command `python -m visdom.server`
   - Open the browser and navigate to the address: `http://localhost:8097`

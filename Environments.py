@@ -1,15 +1,18 @@
-from utils import *
+from globals import *
 
 
-class Environment(nn.Module):
-    def __init__(self, in_channels=4, num_actions=2):
-        super(Environment, self).__init__()
+def FB_transform(x):
+    transform = transforms.Compose([
+        transforms.ToPILImage(),
+        transforms.Lambda(lambda x1: x1.crop((0, 0, 288, 407))),
+        transforms.Lambda(lambda x1: x1.convert('L')),
+        transforms.Scale(size=(80, 80)),
+        transforms.ToTensor(),
+    ])
 
-    def forward(self, x):  # Compute the network output or Q value
-        raise NotImplementedError
+    return transform(x)
 
-    @staticmethod
-    def transform(x):
-        raise NotImplementedError
 
-from environments.FlappyBird import FlappyBirdNet
+env_transform = {
+    'FlappyBird': FB_transform
+}

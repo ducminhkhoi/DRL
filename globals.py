@@ -4,6 +4,7 @@ import gym
 import numpy as np
 from PIL import Image
 import random
+from time import time
 
 import matplotlib.pyplot as plt
 import torch
