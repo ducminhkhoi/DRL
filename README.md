@@ -18,3 +18,7 @@ Steps:
 + `globals.py` import all import libraries, if you need something new, you can add to your own agent file.
 + `configs.py` contains all the configurations for different experiments
 + `Agents.py` and `Environments.py` contain the template for agents and environments respectively
+
+There are 2 environments: 
++ `FlappyBird`: for comparing results between `DQN` and `A3C` (Can run on server!)
++ `MountainCar`: for comparing results between `DQN`, `A3C` and `DDPG` (Can only run on Computer that has screen)
