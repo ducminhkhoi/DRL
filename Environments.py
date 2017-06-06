@@ -18,7 +18,7 @@ def MCC_transform(x):
         transforms.ToPILImage(),
         # transforms.Lambda(lambda x1: x1.crop((0, 0, 288, 407))),
         transforms.Lambda(lambda x1: x1.convert('L')),
-        transforms.Scale(size=(80, 80)),
+        transforms.Scale(size=(84, 84)),
         transforms.ToTensor(),
     ])
 
@@ -30,7 +30,7 @@ def MC_transform(x):
         transforms.ToPILImage(),
         # transforms.Lambda(lambda x1: x1.crop((0, 0, 288, 407))),
         transforms.Lambda(lambda x1: x1.convert('L')),
-        transforms.Scale(size=(80, 80)),
+        transforms.Scale(size=(84, 84)),
         transforms.ToTensor(),
     ])
 
@@ -42,7 +42,7 @@ def PDL_transform(x):
         transforms.ToPILImage(),
         # transforms.Lambda(lambda x1: x1.crop((0, 0, 288, 407))),
         transforms.Lambda(lambda x1: x1.convert('L')),
-        transforms.Scale(size=(80, 80)),
+        transforms.Scale(size=(84, 84)),
         transforms.ToTensor(),
     ])
 

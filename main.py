@@ -4,6 +4,7 @@ from configs import set_configs
 import Agents
 from Environments import env_transform
 from agents.A3C import A3CNet
+import sys
 
 nb_episode = 100000
 threshold_reward = 20
@@ -11,10 +12,11 @@ is_render = True  # Need to display the game on screen or not
 is_plotting = True  # Need to plot the rewards over time or not
 
 # to CNN as 4 channels
-nb_episode_to_test = 10000  # Number of Epochs to test after
+nb_episode_to_test = 100000  # Number of Epochs to test after
 
 agent_name = 'DQN'  # Change the name of the agent
-env_name = 'FlappyBird'  # Change the name of the environment
+#env_name = 'FlappyBird'  # Change the name of the environment
+env_name = 'MountainCar'
 if agent_name == 'DDPG':
     env_name += 'Continuous'
 chosen_config = 'config1'  # see in `configs.py` file
@@ -263,6 +265,10 @@ def a3c_master_agent(shared_net, queue):
 
 if __name__ == '__main__':
 
+    saved_weight_file = None
+    if len(sys.argv) > 1:
+        saved_weight_file = sys.argv[1]
+
     list_reward = []
     list_avg_reward = []
 
@@ -285,6 +291,8 @@ if __name__ == '__main__':
         mode = "train"  # train or test
 
         if mode == "train":
+            if saved_weight_file != None:
+            	agent.load(saved_weight_file)
             env = gym.make(env_name + version)  # Enter name of environment here
             agent = getattr(Agents, agent_name)(num_actions=1 if agent_name == 'DDPG' else env.action_space.n,
                                                 in_channels=config['in_channels'],
