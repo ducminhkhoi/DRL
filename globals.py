@@ -34,7 +34,7 @@ import socket
 import pickle
 
 from copy import deepcopy
-
+from itertools import product
 
 viz = Visdom()
 

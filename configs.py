@@ -66,7 +66,7 @@ set_configs = {
         }
     },
     'DDPG':{
-        'config1': {  # official setting
+        'config2': {  # official setting
             'length_to_update': 5,
             'name': 'config1',
             'lr': 0.001,   # learning rate
@@ -92,7 +92,7 @@ set_configs = {
             'action_type': 'continuous',
             'use_expect': False
         },
-        'config2': {
+        'config1': {
             'length_to_update': 50,
             'name': 'config2',
             'lr': 1e-6,   # learning rate
@@ -116,6 +116,7 @@ set_configs = {
             'num_actions': 2,
             'use_memory': False,
             'action_type': 'continuous',
+            'use_expect': False,
         }
 
     }

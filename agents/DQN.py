@@ -15,33 +15,39 @@ def weights_init(ms, init_types):
 
 
 class DQNNet(nn.Module):
-    def __init__(self, in_channels=4, num_actions=2):
+    def __init__(self, in_channels=4, num_actions=2, use_conv=True):
         super(DQNNet, self).__init__()
+
         self.conv1 = nn.Conv2d(in_channels, 32, kernel_size=8, stride=4)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=4, stride=2)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
-        self.fc4 = nn.Linear(7 * 7 * 64, 512)
+
+        if use_conv:
+            self.fc4 = nn.Linear(7 * 7 * 64, 512)
+        else:
+            self.fc4 = nn.Linear(in_channels, 512)
         self.fc5 = nn.Linear(512, num_actions)
-        self.in_channels = in_channels
+        self.use_conv = use_conv
 
         # weight initialize
         weights_init([self.conv1, self.conv2, self.conv3, self.fc4, self.fc5], "normal")
 
     def forward(self, x):  # Compute the network output or Q value
-        # x = x.contiguous().view(-1, self.in_channels, 80, 80)
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-        x = F.relu(self.conv3(x))
+        if self.use_conv:
+            x = F.relu(self.conv1(x))
+            x = F.relu(self.conv2(x))
+            x = F.relu(self.conv3(x))
+
         x = x.view(x.size(0), -1)
         x = F.relu(self.fc4(x))
         return self.fc5(x)
 
 
 class DQN(Agent):
-    def __init__(self, num_actions, in_channels, config):
+    def __init__(self, num_actions, in_channels, use_conv, config):
         super(DQN, self).__init__()
 
-        net = DQNNet(in_channels, num_actions)
+        net = DQNNet(in_channels, num_actions, use_conv)
         self.net = net.cuda() if isGPU else net
 
         self.optimizer = torch.optim.Adam(self.net.parameters(), lr=config['lr'])
@@ -76,8 +82,15 @@ class DQN(Agent):
 
         if len(self.experience_replay) >= self.observation:  # if have enough experience example, go
 
-            minibatch = np.array(random.sample(self.experience_replay, self.batch_size))
-            states, actions, rewards, new_states, dones = tuple(minibatch[:, k] for k in range(5))
+            # minibatch = np.array(random.sample(self.experience_replay, self.batch_size))
+            # states, actions, rewards, new_states, dones = tuple(minibatch[:, k] for k in range(5))
+
+            mini_batch = random.sample(self.experience_replay, self.batch_size)
+            states = torch.cat([mini_batch[k][0].unsqueeze(0) for k in range(self.batch_size)])
+            actions = [mini_batch[k][1] for k in range(self.batch_size)]
+            rewards = [mini_batch[k][2] for k in range(self.batch_size)]
+            new_states = torch.cat([mini_batch[k][3].unsqueeze(0) for k in range(self.batch_size)])
+            dones = [mini_batch[k][4] for k in range(self.batch_size)]
 
             new_states = torch.cat([x.unsqueeze(0) for x in new_states], 0)
             new_states = to_variable(new_states)
@@ -89,11 +102,14 @@ class DQN(Agent):
             out = self.net.forward(states)
 
             # Perform Gradient Descent
-            action_input = to_variable(actions.astype(int), dtype='long')
+            action_input = to_variable(actions, dtype='long')
             y_label = to_variable([rewards[i] if dones[i] else rewards[i] + self.gamma * np.max(q_prime[i])
                                         for i in range(self.batch_size)])
 
-            y_out = out.gather(1, action_input.unsqueeze(1))
+            try:
+                y_out = out.gather(1, action_input.view(-1, 1))
+            except RuntimeError:
+                pass
 
             self.optimizer.zero_grad()
             loss = self.loss(y_out, y_label)

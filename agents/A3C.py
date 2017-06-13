@@ -34,20 +34,26 @@ def ensure_shared_grads(model, shared_model):
 
 
 class A3CNet(nn.Module):
-    def __init__(self, config, in_channels=1, num_actions=2):
+    def __init__(self, config, in_channels=1, num_actions=2, use_conv=True):
         super(A3CNet, self).__init__()
+
         self.conv1 = nn.Conv2d(in_channels, 16, 8, stride=4)
         self.conv2 = nn.Conv2d(16, 32, 4, stride=2)
         self.is_LSTM_mode = config['name'] == 'LSTM'
+        self.use_conv = use_conv
 
-        if self.is_LSTM_mode:
-            self.lstm = nn.LSTMCell(config['hidden_size'], config['hidden_size'])
-            self.fc1 = nn.Linear(32 * 9 * 9, config['hidden_size'])
-            self.lstm.bias_ih.data.fill_(0)
-            self.lstm.bias_hh.data.fill_(0)
+        if use_conv:
+            if self.is_LSTM_mode:
+                self.lstm = nn.LSTMCell(config['hidden_size'], config['hidden_size'])
+                self.lstm.bias_ih.data.fill_(0)
+                self.lstm.bias_hh.data.fill_(0)
+                self.fc1 = nn.Linear(32 * 9 * 9, config['hidden_size'])
+
+            else:
+                self.conv3 = nn.Conv2d(32, 64, 3, stride=1)
+                self.fc1 = nn.Linear(64 * 7 * 7, config['hidden_size'])
         else:
-            self.conv3 = nn.Conv2d(32, 64, 3, stride=1)
-            self.fc1 = nn.Linear(64 * 7 * 7, config['hidden_size'])
+            self.fc1 = nn.Linear(in_channels, config['hidden_size'])
 
         self.critic_linear = nn.Linear(config['hidden_size'], 1)
         self.actor_linear = nn.Linear(config['hidden_size'], num_actions)
@@ -70,18 +76,21 @@ class A3CNet(nn.Module):
         else:
             inputs = x
 
-        x = F.relu(self.conv1(inputs))
-        x = F.relu(self.conv2(x))
+        if self.use_conv:
+            x = F.relu(self.conv1(inputs))
+            x = F.relu(self.conv2(x))
 
-        if self.is_LSTM_mode:
-            x = x.view(x.size(0), -1)
-            x = self.fc1(x)
-            hx, cx = self.lstm(x, (hx, cx))
-            x = hx
+            if self.is_LSTM_mode:
+                x = x.view(x.size(0), -1)
+                x = self.fc1(x)
+                hx, cx = self.lstm(x, (hx, cx))
+                x = hx
+            else:
+                x = F.relu(self.conv3(x))
+                x = x.view(x.size(0), -1)
+                # print(x.size())
+                x = self.fc1(x)
         else:
-            x = F.relu(self.conv3(x))
-            x = x.view(x.size(0), -1)
-            # print(x.size())
             x = self.fc1(x)
 
         if self.is_LSTM_mode:
@@ -93,9 +102,9 @@ class A3CNet(nn.Module):
 
 
 class A3C(Agent):
-    def __init__(self, shared_net, num_actions, in_channels, config):
+    def __init__(self, shared_net, num_actions, in_channels, use_conv, config):
         super(A3C, self).__init__()
-        net = A3CNet(config, in_channels, num_actions)
+        net = A3CNet(config, in_channels, num_actions, use_conv)
 
         self.net = net.cuda() if isGPU else net
         self.config = config
@@ -160,7 +169,10 @@ class A3C(Agent):
         gae = torch.zeros(1, 1)
         gae = gae.cuda() if isGPU else gae
         for i in reversed(range(len(rewards))):
-            R = self.gamma * R + rewards[i]
+            try:
+                R = self.gamma * R + rewards[i]
+            except TypeError:
+                pass
 
             delta_t = rewards[i] + self.gamma * values[i + 1].data - values[i].data
             gae = gae * self.gamma * self.tau + delta_t

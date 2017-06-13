@@ -32,7 +32,7 @@ def to_variable(var, volatile=False, requires_grad=False, dtype='float'):
     elif isinstance(var, (list, tuple)):
         var = torch.FloatTensor(var)
 
-    if len(var.size()) == 3:  # just have one example, unsqueeze(0)
+    if len(var.size()) in [1, 3]:  # just have one example, unsqueeze(0)
         tensor_var = getattr(var, dtype)().unsqueeze(0)
     else:
         tensor_var = getattr(var, dtype)()
